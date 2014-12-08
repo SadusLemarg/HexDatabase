@@ -1,36 +1,108 @@
 package levelup.hex.database;
 
-import android.support.v7.app.ActionBarActivity;
+import levelup.hex.database.models.CheckConnection;
+import levelup.hex.database.models.SearchData;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import android.app.Activity;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.os.Handler;
+import android.os.Message;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
+public class Main extends Activity {
+	
+	String jsonUrl = "http://hexonline.com.br/hex-database/json/card/all";
+	
+	TextView status;
+	
+	@Override
+	protected void onCreate(Bundle savedInstanceState){
+		
+		super.onCreate(savedInstanceState);
+		//teste
+		setContentView(R.layout.main);
+		
+		status = (TextView) findViewById(R.id.status);
+		
+		callConnectionCheck();
+	}
+	
+	
+	// TESTA CONEXÃO ====================================================================================================
+	public void callConnectionCheck() {
+		
+		CheckConnection connection = new CheckConnection(getApplicationContext());
+		Boolean connectionStatus = connection.CheckingConnection();
+		 
+        if (connectionStatus) {
 
-public class Main extends ActionBarActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
+        	status.setText("Baixando Json...");
+        	StartConnection();
         }
-        return super.onOptionsItemSelected(item);
-    }
+        else {
+
+        	status.setText("Sem Conexão");
+        }
+	}
+	
+	
+	// BUSCAR OS DADOS ====================================================================================================
+	public void StartConnection(){
+		
+		new SearchData(this.jsonMsg).execute(this.jsonUrl);
+	}
+	
+	public Handler jsonMsg = new Handler(){
+		
+		@Override
+		public void handleMessage(Message msg){
+			
+			String jsonAnswer = (String) msg.getData().getString("answer");
+			
+			if(jsonAnswer != ""){
+				
+				status.setText("É Nóis!");
+				
+				TreatObject(jsonAnswer);
+			}
+		}
+	};
+
+	
+	// CAPTURA O OBJETO ====================================================================================================
+	@SuppressWarnings("unused")
+	private void TreatObject(String data) {
+		
+		try {
+			
+			JSONArray dataCards = new JSONArray(data);
+			
+			for(int i=0; i<dataCards.length(); i++){
+				
+				JSONObject dataCard = dataCards.getJSONObject(i);
+				
+				String jsonData = dataCards.getJSONObject(i).getString("name");
+				showText(i, jsonData);				
+			}
+		}
+		catch (Exception e) {
+			
+			status.setText("Problema com o Objeto :" + e);
+		}
+	}
+	
+	
+	// MOSTRA O OBJETO ====================================================================================================
+	private void showText(int i, String name){
+		
+		TextView tv = new TextView(this);
+		tv.setText(i + " - " + name);
+		
+		LinearLayout ll = (LinearLayout) findViewById(R.id.main);
+		ll.addView(tv);
+	}
 }
